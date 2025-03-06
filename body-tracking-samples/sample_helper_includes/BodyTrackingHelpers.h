@@ -6,6 +6,7 @@
 #include <array>
 #include <unordered_map>
 #include <k4abttypes.h>
+#include <string>
 
 #include <string>
 
