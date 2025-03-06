@@ -229,6 +229,11 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
     // Visualize the skeleton data
     window3d.CleanJointsAndBones();
     uint32_t numBodies = k4abt_frame_get_num_bodies(bodyFrame);
+
+    // For multiple bodies
+    std::vector<k4abt_body_t> bodies;
+    bodies.reserve(numBodies);
+
     for (uint32_t i = 0; i < numBodies; i++)
     {
         k4abt_body_t body;
@@ -246,8 +251,8 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
 		}
         std::cout << std::endl;
 
-		// Save joint positions to CSV file
-        SaveJointPositionsToCSV(body, csvFile, timestamp);
+        // Add bidy to the vector
+        bodies.push_back(body);
 
         // Assign the correct color based on the body id
         Color color = g_bodyColors[body.id % g_bodyColors.size()];
@@ -286,6 +291,16 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
 
                 window3d.AddBone(joint1Position, joint2Position, confidentBone ? color : lowConfidenceColor);
             }
+        }
+    }
+
+	// Save the joint positions to a CSV file
+    if (!bodies.empty()) {
+        try {
+            SaveMultipleBodiesToCSV(bodies, csvFile, timestamp);
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Failed to write CSV data: " << e.what() << std::endl;
         }
     }
 
