@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #include <array>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <vector>
@@ -12,6 +13,8 @@
 #include <BodyTrackingHelpers.h>
 #include <Utilities.h>
 #include <Window3dWrapper.h>
+
+#include "SaveCSV.h"
 
 void PrintUsage()
 {
@@ -99,6 +102,8 @@ struct InputSettings
     bool Offline = false;
     std::string FileName;
     std::string ModelPath;
+
+	std::string CsvFileName = "joint_positions.csv";
 };
 
 bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettings)
@@ -154,6 +159,16 @@ bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettin
                 return false;
             }
         }
+		else if (inputArg == std::string("-csv"))
+		{
+			if (i < argc - 1)
+				inputSettings.CsvFileName = argv[++i];
+			else
+			{
+				printf("Error: csv file name missing\n");
+				return false;
+			}
+		}
         else
         {
             printf("Error: command not understood: %s\n", inputArg.c_str());
@@ -163,7 +178,7 @@ bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettin
     return true;
 }
 
-void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int depthWidth, int depthHeight) {
+void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int depthWidth, int depthHeight, std::ofstream& csvFile, uint64_t frameCount) {
 
     // Obtain original capture that generates the body tracking result
     k4a_capture_t originalCapture = k4abt_frame_get_capture(bodyFrame);
@@ -219,6 +234,9 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
 		}
         std::cout << std::endl;
 
+		// Save joint positions to CSV file
+        SaveJointPositionsToCSV(body, csvFile, frameCount);
+
         // Assign the correct color based on the body id
         Color color = g_bodyColors[body.id % g_bodyColors.size()];
         color.a = 0.4f;
@@ -264,7 +282,7 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
 
 }
 
-void PlayFile(InputSettings inputSettings)
+void PlayFile(InputSettings inputSettings, std::ofstream& csvFile)
 {
     // Initialize the 3d window controller
     Window3dWrapper window3d;
@@ -341,7 +359,7 @@ void PlayFile(InputSettings inputSettings)
             if (popFrameResult == K4A_WAIT_RESULT_SUCCEEDED)
             {
                 /************* Successfully get a body tracking result, process the result here ***************/
-                VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight); 
+                VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, 0); 
                 //Release the bodyFrame
                 k4abt_frame_release(bodyFrame);
             }
@@ -364,7 +382,7 @@ void PlayFile(InputSettings inputSettings)
     k4a_playback_close(playbackHandle);
 }
 
-void PlayFromDevice(InputSettings inputSettings) 
+void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile) 
 {
     k4a_device_t device = nullptr;
     VERIFY(k4a_device_open(0, &device), "Open K4A Device failed!");
@@ -394,6 +412,8 @@ void PlayFromDevice(InputSettings inputSettings)
     window3d.Create("3D Visualization", sensorCalibration);
     window3d.SetCloseCallback(CloseCallback);
     window3d.SetKeyCallback(ProcessKey);
+
+	uint64_t frameCount = 0;
 
     while (s_isRunning)
     {
@@ -427,10 +447,11 @@ void PlayFromDevice(InputSettings inputSettings)
         if (popFrameResult == K4A_WAIT_RESULT_SUCCEEDED)
         {
             /************* Successfully get a body tracking result, process the result here ***************/
-            VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight);
+            VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, frameCount);
             //Release the bodyFrame
             k4abt_frame_release(bodyFrame);
         }
+		frameCount++;
        
         window3d.SetLayout3d(s_layoutMode);
         window3d.SetJointFrameVisualization(s_visualizeJointFrame);
@@ -458,15 +479,24 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // Open the CSV file
+    std::ofstream csvFile(inputSettings.CsvFileName, std::ios::app);
+    if (!csvFile.is_open())
+    {
+        std::cerr << "Failed to open CSV file: " << inputSettings.CsvFileName << std::endl;
+        return -1;
+    }
+
     // Either play the offline file or play from the device
     if (inputSettings.Offline == true)
     {
-        PlayFile(inputSettings);
+        PlayFile(inputSettings, csvFile);
     }
     else
     {
-        PlayFromDevice(inputSettings);
+        PlayFromDevice(inputSettings, csvFile);
     }
+	csvFile.close();
 
     return 0;
 }
