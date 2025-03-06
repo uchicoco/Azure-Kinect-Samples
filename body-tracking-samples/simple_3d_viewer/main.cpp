@@ -34,10 +34,14 @@ void PrintUsage()
 #endif
     printf("      TENSORRT - Use the TensorRT processing mode.\n");
     printf("      OFFLINE - Play a specified file. Does not require Kinect device\n");
+    printf("  - Additional options:\n");
+    printf("      -csv filename.csv - Specify the output CSV file name (optional, default: joint_positions.csv)\n");
+    printf("      -novis - Disable visualization, only write to CSV (optional)\n");
     printf("e.g.   (k4abt_)simple_3d_viewer.exe WFOV_BINNED CPU\n");
     printf("e.g.   (k4abt_)simple_3d_viewer.exe CPU\n");
     printf("e.g.   (k4abt_)simple_3d_viewer.exe WFOV_BINNED\n");
     printf("e.g.   (k4abt_)simple_3d_viewer.exe OFFLINE MyFile.mkv\n");
+    printf("e.g.   (k4abt_)simple_3d_viewer.exe OFFLINE MyFile.mkv -novis\n");
 }
 
 void PrintAppUsage()
@@ -100,6 +104,7 @@ struct InputSettings
     k4abt_tracker_processing_mode_t processingMode = K4ABT_TRACKER_PROCESSING_MODE_GPU_CUDA;
 #endif
     bool Offline = false;
+	bool Visualization = true;
     std::string FileName;
     std::string ModelPath;
 	std::string CSVFileName = "joint_positions.csv";
@@ -181,6 +186,10 @@ bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettin
 		{
 			inputSettings.CameraFPS = K4A_FRAMES_PER_SECOND_30;
 		}
+        else if (inputArg == std::string("-novis"))
+        {
+            inputSettings.Visualization = false;
+        }
         else
         {
             printf("Error: command not understood: %s\n", inputArg.c_str());
@@ -343,9 +352,13 @@ void PlayFile(InputSettings inputSettings, std::ofstream& csvFile)
     int depthWidth = sensorCalibration.depth_camera_calibration.resolution_width;
     int depthHeight = sensorCalibration.depth_camera_calibration.resolution_height;
 
-    window3d.Create("3D Visualization", sensorCalibration);
-    window3d.SetCloseCallback(CloseCallback);
-    window3d.SetKeyCallback(ProcessKey);
+    // Only initialize visualization if enabled
+    if (inputSettings.Visualization)
+    {
+        window3d.Create("3D Visualization", sensorCalibration);
+        window3d.SetCloseCallback(CloseCallback);
+        window3d.SetKeyCallback(ProcessKey);
+    }
 
     while (playbackResult == K4A_STREAM_RESULT_SUCCEEDED && s_isRunning)
     {
@@ -386,7 +399,34 @@ void PlayFile(InputSettings inputSettings, std::ofstream& csvFile)
             if (popFrameResult == K4A_WAIT_RESULT_SUCCEEDED)
             {
                 /************* Successfully get a body tracking result, process the result here ***************/
-                VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, 0); 
+                if (inputSettings.Visualization)
+                {
+                    VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, 0);
+                }
+                else
+                {
+                    // Extract bodies and save to CSV without visualization
+                    uint32_t numBodies = k4abt_frame_get_num_bodies(bodyFrame);
+                    std::vector<k4abt_body_t> bodies;
+                    bodies.reserve(numBodies);
+
+                    for (uint32_t i = 0; i < numBodies; i++)
+                    {
+                        k4abt_body_t body;
+                        VERIFY(k4abt_frame_get_body_skeleton(bodyFrame, i, &body.skeleton), "Get skeleton from body frame failed!");
+                        body.id = k4abt_frame_get_body_id(bodyFrame, i);
+                        bodies.push_back(body);
+                    }
+
+                    if (!bodies.empty()) {
+                        try {
+                            SaveMultipleBodiesToCSV(bodies, csvFile, 0);
+                        }
+                        catch (const std::exception& e) {
+                            std::cerr << "Failed to write CSV data: " << e.what() << std::endl;
+                        }
+                    }
+                }
                 //Release the bodyFrame
                 k4abt_frame_release(bodyFrame);
             }
@@ -397,14 +437,22 @@ void PlayFile(InputSettings inputSettings, std::ofstream& csvFile)
             }
         }
 
-        window3d.SetLayout3d(s_layoutMode);
-        window3d.SetJointFrameVisualization(s_visualizeJointFrame);
-        window3d.Render();
+        if (inputSettings.Visualization)
+        {
+            window3d.SetLayout3d(s_layoutMode);
+            window3d.SetJointFrameVisualization(s_visualizeJointFrame);
+            window3d.Render();
+        }
     }
 
     k4abt_tracker_shutdown(tracker);
     k4abt_tracker_destroy(tracker);
-    window3d.Delete();
+    
+    if (inputSettings.Visualization)
+    {
+        window3d.Delete();
+    }
+    
     printf("Finished body tracking processing!\n");
     k4a_playback_close(playbackHandle);
 }
@@ -435,11 +483,14 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
     trackerConfig.model_path = inputSettings.ModelPath.c_str();
     VERIFY(k4abt_tracker_create(&sensorCalibration, trackerConfig, &tracker), "Body tracker initialization failed!");
 
-    // Initialize the 3d window controller
+    // Initialize the 3d window controller only if visualization is enabled
     Window3dWrapper window3d;
-    window3d.Create("3D Visualization", sensorCalibration);
-    window3d.SetCloseCallback(CloseCallback);
-    window3d.SetKeyCallback(ProcessKey);
+    if (inputSettings.Visualization)
+    {
+        window3d.Create("3D Visualization", sensorCalibration);
+        window3d.SetCloseCallback(CloseCallback);
+        window3d.SetKeyCallback(ProcessKey);
+    }
 
     while (s_isRunning)
     {
@@ -474,20 +525,56 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
         {
 			// Get timestamp of system
             uint64_t timestamp = GetTimestamp();
-            /************* Successfully get a body tracking result, process the result here ***************/
-            VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, timestamp);
+            
+            // Process the body frame based on visualization setting
+            if (inputSettings.Visualization)
+            {
+                VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, timestamp);
+            }
+            else
+            {
+                // Extract bodies and save to CSV without visualization
+                uint32_t numBodies = k4abt_frame_get_num_bodies(bodyFrame);
+                std::vector<k4abt_body_t> bodies;
+                bodies.reserve(numBodies);
+
+                for (uint32_t i = 0; i < numBodies; i++)
+                {
+                    k4abt_body_t body;
+                    VERIFY(k4abt_frame_get_body_skeleton(bodyFrame, i, &body.skeleton), "Get skeleton from body frame failed!");
+                    body.id = k4abt_frame_get_body_id(bodyFrame, i);
+                    bodies.push_back(body);
+                }
+
+                if (!bodies.empty()) {
+                    try {
+                        SaveMultipleBodiesToCSV(bodies, csvFile, timestamp);
+                    }
+                    catch (const std::exception& e) {
+                        std::cerr << "Failed to write CSV data: " << e.what() << std::endl;
+                    }
+                }
+            }
+            
             //Release the bodyFrame
             k4abt_frame_release(bodyFrame);
         }
        
-        window3d.SetLayout3d(s_layoutMode);
-        window3d.SetJointFrameVisualization(s_visualizeJointFrame);
-        window3d.Render();
+        if (inputSettings.Visualization)
+        {
+            window3d.SetLayout3d(s_layoutMode);
+            window3d.SetJointFrameVisualization(s_visualizeJointFrame);
+            window3d.Render();
+        }
     }
 
     std::cout << "Finished body tracking processing!" << std::endl;
 
-    window3d.Delete();
+    if (inputSettings.Visualization)
+    {
+        window3d.Delete();
+    }
+    
     k4abt_tracker_shutdown(tracker);
     k4abt_tracker_destroy(tracker);
 

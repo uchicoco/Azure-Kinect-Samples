@@ -1,8 +1,9 @@
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <stdexcept>
 #include <sstream>
-#include <mutex>
+
 #include <vector>
 
 #include <BodyTrackingHelpers.h>
