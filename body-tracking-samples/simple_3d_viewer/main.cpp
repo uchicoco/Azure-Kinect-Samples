@@ -171,6 +171,17 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
 
     std::vector<Color> pointCloudColors(depthWidth * depthHeight, { 1.f, 1.f, 1.f, 1.f });
 
+    const k4abt_joint_id_t jointsOnTerminal[] =
+    {
+        K4ABT_JOINT_PELVIS,
+        K4ABT_JOINT_SPINE_CHEST,
+        K4ABT_JOINT_HEAD,
+        K4ABT_JOINT_HAND_LEFT,
+        K4ABT_JOINT_HAND_RIGHT,
+        K4ABT_JOINT_FOOT_LEFT,
+        K4ABT_JOINT_FOOT_RIGHT
+    };
+
     // Read body index map and assign colors
     k4a_image_t bodyIndexMap = k4abt_frame_get_body_index_map(bodyFrame);
     const uint8_t* bodyIndexMapBuffer = k4a_image_get_buffer(bodyIndexMap);
@@ -196,6 +207,17 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
         k4abt_body_t body;
         VERIFY(k4abt_frame_get_body_skeleton(bodyFrame, i, &body.skeleton), "Get skeleton from body frame failed!");
         body.id = k4abt_frame_get_body_id(bodyFrame, i);
+
+        // Print some joint positions on terminal
+		std::cout << "=====Body ID: " << body.id << "=====" << std::endl;
+		for (const auto& joint : jointsOnTerminal)
+		{
+			const k4a_float3_t position = body.skeleton.joints[joint].position;
+			std::cout << g_jointNames.at(joint) << ": X=" << position.xyz.x
+                << ", Y=" << position.xyz.y
+                << ", Z=" << position.xyz.z << std::endl;
+		}
+        std::cout << std::endl;
 
         // Assign the correct color based on the body id
         Color color = g_bodyColors[body.id % g_bodyColors.size()];
