@@ -86,7 +86,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="SaveCSV.cpp" />
+    <ClCompile Include="Addition.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\sample_helper_libs\window_controller_3d\window_controller_3d.vcxproj">
@@ -98,7 +98,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SaveCSV.h" />
+    <ClInclude Include="Addition.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

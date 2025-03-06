@@ -18,7 +18,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SaveCSV.cpp">
+    <ClCompile Include="Addition.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -27,7 +27,7 @@
     <None Include="dnn_model_2_0.onnx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SaveCSV.h">
+    <ClInclude Include="Addition.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

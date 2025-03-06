@@ -3,11 +3,13 @@
 #include <stdexcept>
 #include <sstream>
 
+
 #include <BodyTrackingHelpers.h>
+#include <Windows.h>
 
-#include "SaveCSV.h"
+#include "Addition.h"
 
-void SaveJointPositionsToCSV(const k4abt_body_t& body, std::ofstream& csvFile, uint64_t frameCount)
+void SaveJointPositionsToCSV(const k4abt_body_t& body, std::ofstream& csvFile, uint64_t timestamp)
 {
     try
     {
@@ -20,7 +22,7 @@ void SaveJointPositionsToCSV(const k4abt_body_t& body, std::ofstream& csvFile, u
         if (csvFile.tellp() == 0)
         {
             std::stringstream headerStream;
-            headerStream << "BodyID,FrameCount";
+            headerStream << "BodyID,Time";
             
             for (int joint = 0; joint < static_cast<int>(K4ABT_JOINT_COUNT); joint++)
             {
@@ -36,7 +38,7 @@ void SaveJointPositionsToCSV(const k4abt_body_t& body, std::ofstream& csvFile, u
 
         // Build data row in a string stream for better performance
         std::stringstream dataStream;
-        dataStream << body.id << "," << frameCount;
+        dataStream << body.id << "," << timestamp;
         
         // Write joint positions and confidence levels
         for (int joint = 0; joint < static_cast<int>(K4ABT_JOINT_COUNT); joint++)
@@ -61,4 +63,21 @@ void SaveJointPositionsToCSV(const k4abt_body_t& body, std::ofstream& csvFile, u
     {
         std::cerr << "Error writing CSV: " << e.what() << std::endl;
     }
+}
+
+// Function to get the current timestamp in microseconds
+uint64_t GetTimestamp()
+{
+#ifdef _WIN32
+    // Windows
+    LARGE_INTEGER frequency, counter;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&counter);
+    return (uint64_t)(counter.QuadPart * 1000000 / frequency.QuadPart);
+#else
+    // Linux/Unix
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)(ts.tv_sec * 1000000 + ts.tv_nsec / 1000);
+#endif
 }

@@ -14,7 +14,7 @@
 #include <Utilities.h>
 #include <Window3dWrapper.h>
 
-#include "SaveCSV.h"
+#include "Addition.h"
 
 void PrintUsage()
 {
@@ -102,8 +102,8 @@ struct InputSettings
     bool Offline = false;
     std::string FileName;
     std::string ModelPath;
-
-	std::string CsvFileName = "joint_positions.csv";
+	std::string CSVFileName = "joint_positions.csv";
+	k4a_fps_t CameraFPS = K4A_FRAMES_PER_SECOND_30;
 };
 
 bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettings)
@@ -162,12 +162,24 @@ bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettin
 		else if (inputArg == std::string("-csv"))
 		{
 			if (i < argc - 1)
-				inputSettings.CsvFileName = argv[++i];
+				inputSettings.CSVFileName = argv[++i];
 			else
 			{
-				printf("Error: csv file name missing\n");
+				printf("Error: CSV file name missing\n");
 				return false;
 			}
+		}
+		else if (inputArg == std::string("FPS_5"))
+		{
+			inputSettings.CameraFPS = K4A_FRAMES_PER_SECOND_5;
+		}
+		else if (inputArg == std::string("FPS_15"))
+		{
+			inputSettings.CameraFPS = K4A_FRAMES_PER_SECOND_15;
+		}
+		else if (inputArg == std::string("FPS_30"))
+		{
+			inputSettings.CameraFPS = K4A_FRAMES_PER_SECOND_30;
 		}
         else
         {
@@ -178,7 +190,7 @@ bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettin
     return true;
 }
 
-void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int depthWidth, int depthHeight, std::ofstream& csvFile, uint64_t frameCount) {
+void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int depthWidth, int depthHeight, std::ofstream& csvFile, uint64_t timestamp) {
 
     // Obtain original capture that generates the body tracking result
     k4a_capture_t originalCapture = k4abt_frame_get_capture(bodyFrame);
@@ -235,7 +247,7 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
         std::cout << std::endl;
 
 		// Save joint positions to CSV file
-        SaveJointPositionsToCSV(body, csvFile, frameCount);
+        SaveJointPositionsToCSV(body, csvFile, timestamp);
 
         // Assign the correct color based on the body id
         Color color = g_bodyColors[body.id % g_bodyColors.size()];
@@ -391,6 +403,7 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
     k4a_device_configuration_t deviceConfig = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
     deviceConfig.depth_mode = inputSettings.DepthCameraMode;
     deviceConfig.color_resolution = K4A_COLOR_RESOLUTION_OFF;
+	deviceConfig.camera_fps = inputSettings.CameraFPS;
     VERIFY(k4a_device_start_cameras(device, &deviceConfig), "Start K4A cameras failed!");
 
     // Get calibration information
@@ -412,8 +425,6 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
     window3d.Create("3D Visualization", sensorCalibration);
     window3d.SetCloseCallback(CloseCallback);
     window3d.SetKeyCallback(ProcessKey);
-
-	uint64_t frameCount = 0;
 
     while (s_isRunning)
     {
@@ -446,12 +457,13 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
         k4a_wait_result_t popFrameResult = k4abt_tracker_pop_result(tracker, &bodyFrame, 0); // timeout_in_ms is set to 0
         if (popFrameResult == K4A_WAIT_RESULT_SUCCEEDED)
         {
+			// Get timestamp of system
+            uint64_t timestamp = GetTimestamp();
             /************* Successfully get a body tracking result, process the result here ***************/
-            VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, frameCount);
+            VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, timestamp);
             //Release the bodyFrame
             k4abt_frame_release(bodyFrame);
         }
-		frameCount++;
        
         window3d.SetLayout3d(s_layoutMode);
         window3d.SetJointFrameVisualization(s_visualizeJointFrame);
@@ -480,10 +492,10 @@ int main(int argc, char** argv)
     }
 
     // Open the CSV file
-    std::ofstream csvFile(inputSettings.CsvFileName, std::ios::app);
+    std::ofstream csvFile(inputSettings.CSVFileName, std::ios::app);
     if (!csvFile.is_open())
     {
-        std::cerr << "Failed to open CSV file: " << inputSettings.CsvFileName << std::endl;
+        std::cerr << "Failed to open CSV file: " << inputSettings.CSVFileName << std::endl;
         return -1;
     }
 
