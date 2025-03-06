@@ -44,7 +44,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
-    <IncludePath>..\sample_helper_includes;..\sample_helper_libs\window_controller_3d;$(IncludePath)</IncludePath>
+    <IncludePath>..\sample_helper_includes;..\sample_helper_libs\window_controller_3d;C:\Users\brick\uchida\Develop\Azure-Kinect-Samples\body-tracking-samples\simple_3d_viewer\packages\Microsoft.Azure.Kinect.BodyTracking.1.1.2\build\native\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\build\bin\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\build\temp\$(Configuration)\$(MSBuildProjectName)\</IntDir>
