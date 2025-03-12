@@ -8,9 +8,11 @@
 #include <k4a/k4a.h>
 
 #include <BodyTrackingHelpers.h>
+#include <Eigen/Dense>
 #include <Windows.h>
 
 #include "Addition.h"
+#include "AngleCalculator.h"
 
 // Mutex for file access synchronization
 static std::mutex g_fileMutex;
@@ -47,7 +49,7 @@ void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstr
                              << "," << jointName << "_Z"
                              << "," << jointName << "_CONFIDENCE";
             }
-            headerStream << std::endl;
+            headerStream << ",ANGLE" << std::endl;
             csvFile << headerStream.str();
         }
 
@@ -57,6 +59,38 @@ void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstr
         // Process all bodies
         for (const auto& body : bodies)
         {
+            // Calculate arm angle
+            Eigen::Vector3d jointPositionPelvis(
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_PELVIS)].position.xyz.x,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_PELVIS)].position.xyz.y,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_PELVIS)].position.xyz.z
+            );
+
+            Eigen::Vector3d jointPositionNeck(
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NECK)].position.xyz.x,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NECK)].position.xyz.y,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NECK)].position.xyz.z
+            );
+
+            Eigen::Vector3d jointPositionNose(
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NOSE)].position.xyz.x,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NOSE)].position.xyz.y,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NOSE)].position.xyz.z
+            );
+
+            Eigen::Vector3d jointPositionShoulder(
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_RIGHT)].position.xyz.x,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_RIGHT)].position.xyz.y,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_RIGHT)].position.xyz.z
+            );
+
+            Eigen::Vector3d jointPositionElbow(
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_RIGHT)].position.xyz.x,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_RIGHT)].position.xyz.y,
+                body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_RIGHT)].position.xyz.z
+            );
+			double angle = CalculateProjectedAngle(jointPositionPelvis, jointPositionNeck, jointPositionNose, jointPositionPelvis, jointPositionShoulder, jointPositionElbow);
+
             batchStream << body.id << "," << timestamp;
             
             for (int joint = 0; joint < static_cast<int>(K4ABT_JOINT_COUNT); joint++)
@@ -67,7 +101,7 @@ void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstr
                            << "," << position.xyz.z
                            << "," << body.skeleton.joints[joint].confidence_level;
             }
-            batchStream << std::endl;
+            batchStream << "," << angle << std::endl;
         }
         
         // Write all data at once

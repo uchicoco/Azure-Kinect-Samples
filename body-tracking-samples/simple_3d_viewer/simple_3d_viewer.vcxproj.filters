@@ -21,6 +21,9 @@
     <ClCompile Include="Addition.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
+    <ClCompile Include="AngleCalculator.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -28,6 +31,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Addition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AngleCalculator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
