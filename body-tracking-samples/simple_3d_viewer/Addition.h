@@ -38,3 +38,13 @@ void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstr
  * @return uint64_t The current timestamp in microseconds, or 0 on error.
  */
 uint64_t GetTimestamp();
+
+/**
+ * @brief Function to save a color image to disk.
+ *
+ * @param colorImage Color image to save
+ * @param folderPath Folder path to save the image
+ * @param timestamp Timestamp of the frame
+ * @param frameCount Frame count of the image
+ */
+void SaveColorImage(const k4a_image_t& colorImage, const std::string& folderPath, uint64_t timestamp, uint64_t frameCount);

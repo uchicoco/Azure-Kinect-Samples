@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -37,6 +38,7 @@ void PrintUsage()
     printf("  - Additional options:\n");
     printf("      -csv filename.csv - Specify the output CSV file name (optional, default: joint_positions.csv)\n");
     printf("      -novis - Disable visualization, only write to CSV (optional)\n");
+	printf("      -img frequency of saving image - Save colorimages to specified folder (optional)\n");
     printf("e.g.   (k4abt_)simple_3d_viewer.exe WFOV_BINNED CPU\n");
     printf("e.g.   (k4abt_)simple_3d_viewer.exe CPU\n");
     printf("e.g.   (k4abt_)simple_3d_viewer.exe WFOV_BINNED\n");
@@ -105,10 +107,14 @@ struct InputSettings
 #endif
     bool Offline = false;
 	bool Visualization = true;
+	bool SaveImage = false;
+    int ImageFreq = 1;
     std::string FileName;
     std::string ModelPath;
 	std::string CSVFileName = "joint_positions.csv";
+	std::string ImageFolder = "color_images";
 	k4a_fps_t CameraFPS = K4A_FRAMES_PER_SECOND_30;
+	k4a_color_resolution_t ColorResolution = K4A_COLOR_RESOLUTION_OFF;
 };
 
 bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettings)
@@ -189,6 +195,15 @@ bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettin
         else if (inputArg == std::string("-novis"))
         {
             inputSettings.Visualization = false;
+        }
+        else if (inputArg == std::string("-img"))
+        {
+            inputSettings.SaveImage = true;
+			inputSettings.ColorResolution = K4A_COLOR_RESOLUTION_720P;
+            if (i < argc - 1)
+            {
+				inputSettings.ImageFreq = atoi(argv[++i]);
+            }
         }
         else
         {
@@ -473,8 +488,16 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
     // Start camera. Make sure depth camera is enabled.
     k4a_device_configuration_t deviceConfig = K4A_DEVICE_CONFIG_INIT_DISABLE_ALL;
     deviceConfig.depth_mode = inputSettings.DepthCameraMode;
-    deviceConfig.color_resolution = K4A_COLOR_RESOLUTION_OFF;
-	deviceConfig.camera_fps = inputSettings.CameraFPS;
+    deviceConfig.color_resolution = inputSettings.ColorResolution;
+    
+    // Make sure color camera is enabled when saving images
+    if (inputSettings.SaveImage && deviceConfig.color_resolution == K4A_COLOR_RESOLUTION_OFF)
+    {
+        std::cout << "Color camera resolution set to 720P for image saving." << std::endl;
+        deviceConfig.color_resolution = K4A_COLOR_RESOLUTION_720P;
+    }
+    
+    deviceConfig.camera_fps = inputSettings.CameraFPS;
     VERIFY(k4a_device_start_cameras(device, &deviceConfig), "Start K4A cameras failed!");
 
     // Get calibration information
@@ -500,6 +523,29 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
         window3d.SetKeyCallback(ProcessKey);
     }
 
+    uint64_t frameCount = 0;
+
+    // Create image directory before starting the capture loop
+    if (inputSettings.SaveImage)
+    {
+        try {
+            if (!std::filesystem::exists(inputSettings.ImageFolder))
+            {
+                if (!std::filesystem::create_directories(inputSettings.ImageFolder))
+                {
+                    std::cerr << "Failed to create directory: " << inputSettings.ImageFolder << std::endl;
+                }
+                else
+                {
+                    std::cout << "Created directory for images: " << inputSettings.ImageFolder << std::endl;
+                }
+            }
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "Filesystem error: " << e.what() << std::endl;
+        }
+    }
+
     while (s_isRunning)
     {
         k4a_capture_t sensorCapture = nullptr;
@@ -507,6 +553,27 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
 
         if (getCaptureResult == K4A_WAIT_RESULT_SUCCEEDED)
         {
+			// Save image following the frequency
+			if (inputSettings.SaveImage && frameCount % inputSettings.ImageFreq == 0)
+			{
+				k4a_image_t colorImage = k4a_capture_get_color_image(sensorCapture);
+				if (colorImage != nullptr)
+				{
+                    // Get timestamp of system
+                    uint64_t colorTimestamp = GetTimestamp();
+                    try {
+					    SaveColorImage(colorImage, inputSettings.ImageFolder, colorTimestamp, frameCount);
+                        std::cout << "Saved image at frame: " << frameCount << std::endl;
+                    }
+                    catch (const std::exception& e) {
+                        std::cerr << "Failed to save image: " << e.what() << std::endl;
+                    }
+					k4a_image_release(colorImage);
+				}
+                else {
+                    std::cerr << "No color image available to save" << std::endl;
+                }
+			}
             // timeout_in_ms is set to 0. Return immediately no matter whether the sensorCapture is successfully added
             // to the queue or not.
             k4a_wait_result_t queueCaptureResult = k4abt_tracker_enqueue_capture(tracker, sensorCapture, 0);
@@ -532,12 +599,12 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
         if (popFrameResult == K4A_WAIT_RESULT_SUCCEEDED)
         {
 			// Get timestamp of system
-            uint64_t timestamp = GetTimestamp();
+            uint64_t bodyTimestamp = GetTimestamp();
             
             // Process the body frame based on visualization setting
             if (inputSettings.Visualization)
             {
-                VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, timestamp);
+                VisualizeResult(bodyFrame, window3d, depthWidth, depthHeight, csvFile, bodyTimestamp);
             }
             else
             {
@@ -559,7 +626,7 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
 
                 if (!bodies.empty()) {
                     try {
-                        SaveMultipleBodiesToCSV(bodies, csvFile, timestamp);
+                        SaveMultipleBodiesToCSV(bodies, csvFile, bodyTimestamp);
                     }
                     catch (const std::exception& e) {
                         std::cerr << "Failed to write CSV data: " << e.what() << std::endl;
@@ -577,6 +644,7 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
             window3d.SetJointFrameVisualization(s_visualizeJointFrame);
             window3d.Render();
         }
+		frameCount++;
     }
 
     std::cout << "Finished body tracking processing!" << std::endl;

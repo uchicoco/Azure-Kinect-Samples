@@ -1,10 +1,11 @@
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <stdexcept>
 #include <sstream>
-
 #include <vector>
+#include <k4a/k4a.h>
 
 #include <BodyTrackingHelpers.h>
 #include <Windows.h>
@@ -13,68 +14,6 @@
 
 // Mutex for file access synchronization
 static std::mutex g_fileMutex;
-
-void SaveJointPositionsToCSV(const k4abt_body_t& body, std::ofstream& csvFile, uint64_t timestamp)
-{
-    try
-    {
-        // Input validation
-        if (!csvFile.is_open())
-        {
-            throw std::runtime_error("Failed to open CSV file - file not open");
-        }
-
-        // Lock the file for exclusive access
-        std::lock_guard<std::mutex> lock(g_fileMutex);
-
-        // Write CSV Header if file is empty
-        if (csvFile.tellp() == 0)
-        {
-            std::stringstream headerStream;
-            headerStream << "BodyID,Time";
-            
-            for (int joint = 0; joint < static_cast<int>(K4ABT_JOINT_COUNT); joint++)
-            {
-                const std::string& jointName = g_jointNames.at(static_cast<k4abt_joint_id_t>(joint));
-                headerStream << "," << jointName << "_X"
-                             << "," << jointName << "_Y"
-                             << "," << jointName << "_Z"
-                             << "," << jointName << "_CONFIDENCE";
-            }
-            headerStream << std::endl;
-            csvFile << headerStream.str();
-        }
-
-        // Build data row in a string stream for better performance
-        std::stringstream dataStream;
-        dataStream << body.id << "," << timestamp;
-        
-        // Write joint positions and confidence levels
-        for (int joint = 0; joint < static_cast<int>(K4ABT_JOINT_COUNT); joint++)
-        {
-            const k4a_float3_t& position = body.skeleton.joints[joint].position;
-            dataStream << "," << position.xyz.x
-                       << "," << position.xyz.y
-                       << "," << position.xyz.z
-                       << "," << body.skeleton.joints[joint].confidence_level;
-        }
-        dataStream << std::endl;
-        
-        // Write the complete row at once
-        csvFile << dataStream.str();
-
-        if (!csvFile.good())
-        {
-            throw std::runtime_error("Failed to write to CSV file - disk full or I/O error");
-        }
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Error writing CSV: " << e.what() << std::endl;
-        // Re-throw to allow caller to handle the error
-        throw;
-    }
-}
 
 void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstream& csvFile, uint64_t timestamp)
 {
@@ -174,3 +113,63 @@ uint64_t GetTimestamp()
 #endif
 }
 
+void SaveColorImage(const k4a_image_t& colorImage, const std::string& folderPath, uint64_t timestamp, uint64_t frameCount)
+{
+	try
+	{
+		// Input validation
+		if (colorImage == nullptr)
+		{
+			throw std::runtime_error("Invalid color image");
+			}
+		
+		// If the folder does not exist, create it
+        try {
+            if (!std::filesystem::exists(folderPath))
+            {
+                if (!std::filesystem::create_directories(folderPath))
+                {
+                    throw std::runtime_error("Failed to create directory: " + folderPath);
+                }
+                std::cout << "Created directory: " << folderPath << std::endl;
+            }
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            throw std::runtime_error("Filesystem error: " + std::string(e.what()));
+        }
+		
+		// Generate filename
+		std::ostringstream ss;
+		ss << folderPath << "/color_" << timestamp << "_" << std::setw(6) << std::setfill('0') << frameCount << ".jpg";
+		std::string fileName = ss.str();
+		
+		// Get metadata of images
+		uint8_t* buffer = k4a_image_get_buffer(colorImage);
+		size_t bufferSize = k4a_image_get_size(colorImage);
+		
+		// Lock the file for exclusive access
+		std::lock_guard<std::mutex> lock(g_fileMutex);
+		
+        // Save as jpeg
+		std::ofstream outFile(fileName, std::ios::binary);
+		if (!outFile)
+		{
+			throw std::runtime_error("Failed to open color image file: " + fileName);
+		}
+		
+		// Write the color image data
+		outFile.write(reinterpret_cast<const char*>(buffer), bufferSize);
+		
+		// Close the file
+		outFile.close();
+		if (!outFile.good())
+		{
+			throw std::runtime_error("Failed to write color image data");
+		}
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error saving color image: " << e.what() << std::endl;
+		throw;
+	}
+}
