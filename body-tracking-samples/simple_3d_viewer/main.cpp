@@ -199,14 +199,7 @@ bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettin
     return true;
 }
 
-void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int depthWidth, int depthHeight, std::ofstream& csvFile, uint64_t timestamp) {
-
-    // Obtain original capture that generates the body tracking result
-    k4a_capture_t originalCapture = k4abt_frame_get_capture(bodyFrame);
-    k4a_image_t depthImage = k4a_capture_get_depth_image(originalCapture);
-
-    std::vector<Color> pointCloudColors(depthWidth * depthHeight, { 1.f, 1.f, 1.f, 1.f });
-
+void PrintJointPositions(const std::vector<k4abt_body_t>& bodies) {
     const k4abt_joint_id_t jointsOnTerminal[] =
     {
         K4ABT_JOINT_PELVIS,
@@ -217,6 +210,26 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
         K4ABT_JOINT_FOOT_LEFT,
         K4ABT_JOINT_FOOT_RIGHT
     };
+
+    for (const auto& body : bodies) {
+        std::cout << "=====Body ID: " << body.id << "=====" << std::endl;
+        for (const auto& joint : jointsOnTerminal) {
+            const k4a_float3_t position = body.skeleton.joints[joint].position;
+            std::cout << g_jointNames.at(joint) << ": X=" << position.xyz.x
+                      << ", Y=" << position.xyz.y
+                      << ", Z=" << position.xyz.z << std::endl;
+        }
+        std::cout << std::endl;
+    }
+}
+
+void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int depthWidth, int depthHeight, std::ofstream& csvFile, uint64_t timestamp) {
+
+    // Obtain original capture that generates the body tracking result
+    k4a_capture_t originalCapture = k4abt_frame_get_capture(bodyFrame);
+    k4a_image_t depthImage = k4a_capture_get_depth_image(originalCapture);
+
+    std::vector<Color> pointCloudColors(depthWidth * depthHeight, { 1.f, 1.f, 1.f, 1.f });
 
     // Read body index map and assign colors
     k4a_image_t bodyIndexMap = k4abt_frame_get_body_index_map(bodyFrame);
@@ -249,18 +262,7 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
         VERIFY(k4abt_frame_get_body_skeleton(bodyFrame, i, &body.skeleton), "Get skeleton from body frame failed!");
         body.id = k4abt_frame_get_body_id(bodyFrame, i);
 
-        // Print some joint positions on terminal
-		std::cout << "=====Body ID: " << body.id << "=====" << std::endl;
-		for (const auto& joint : jointsOnTerminal)
-		{
-			const k4a_float3_t position = body.skeleton.joints[joint].position;
-			std::cout << g_jointNames.at(joint) << ": X=" << position.xyz.x
-                << ", Y=" << position.xyz.y
-                << ", Z=" << position.xyz.z << std::endl;
-		}
-        std::cout << std::endl;
-
-        // Add bidy to the vector
+        // Add body to the vector
         bodies.push_back(body);
 
         // Assign the correct color based on the body id
@@ -302,6 +304,9 @@ void VisualizeResult(k4abt_frame_t bodyFrame, Window3dWrapper& window3d, int dep
             }
         }
     }
+
+    // Print joint positions to terminal
+    PrintJointPositions(bodies);
 
 	// Save the joint positions to a CSV file
     if (!bodies.empty()) {
@@ -417,6 +422,9 @@ void PlayFile(InputSettings inputSettings, std::ofstream& csvFile)
                         body.id = k4abt_frame_get_body_id(bodyFrame, i);
                         bodies.push_back(body);
                     }
+
+                    // Print joint positions to terminal
+                    PrintJointPositions(bodies);
 
                     if (!bodies.empty()) {
                         try {
@@ -545,6 +553,9 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
                     body.id = k4abt_frame_get_body_id(bodyFrame, i);
                     bodies.push_back(body);
                 }
+
+                // Print joint positions to terminal
+                PrintJointPositions(bodies);
 
                 if (!bodies.empty()) {
                     try {
