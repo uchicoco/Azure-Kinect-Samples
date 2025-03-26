@@ -95,6 +95,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="build.sh" />
     <None Include="dnn_model_2_0.onnx" />
     <None Include="packages.config" />
   </ItemGroup>
