@@ -9,8 +9,12 @@
 
 #include <BodyTrackingHelpers.h>
 #include <Eigen/Dense>
-#include <Windows.h>
-
+#ifdef _WIN32
+	#include <Windows.h>
+#else
+	#include <unistd.h>
+	#include <sys/time.h>
+#endif
 #include "Addition.h"
 #include "AngleCalculator.h"
 

@@ -4,49 +4,29 @@
 cmake_minimum_required(VERSION 3.10)
 project(simple_3d_viewer)
 
-# Set C++17 standard
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Azure Kinect SDK packages
-find_package(k4a REQUIRED)
-find_package(k4abt REQUIRED)
-find_package(k4arecord REQUIRED)
+add_subdirectory(../sample_helper_libs/window_controller_3d window_controller_3d)
 
-# Include directories
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/additional_includes
-)
+add_executable(simple_3d_viewer
+       main.cpp
+       Addition.cpp
+       AngleCalculator.cpp)
 
-# Source files
-set(SOURCES
-    main.cpp
-    Addition.cpp
-    AngleCalculator.cpp
-)
+target_include_directories(simple_3d_viewer PRIVATE ../sample_helper_includes)
 
-# Header files
-set(HEADERS
-    Addition.h
-    AngleCalculator.h
-)
+find_package(glfw3 REQUIRED)
+find_package(Eigen3 REQUIRED)
 
-# Create the executable
-add_executable(simple_3d_viewer ${SOURCES} ${HEADERS})
+include_directories(${EIGEN3_INCLUDE_DIR})
 
-# Link libraries
-target_link_libraries(simple_3d_viewer
-    k4a::k4a
-    k4a::k4abt
-    k4a::k4arecord
-    stdc++fs  # For std::filesystem support on Ubuntu 18.04
-    pthread
+# Dependencies of this library
+target_link_libraries(simple_3d_viewer PRIVATE 
+    k4a
+    k4abt
+    k4arecord
+    window_controller_3d::window_controller_3d
+    glfw
     dl
-)
-
-# If OpenGL visualization is needed, uncomment these lines
-# find_package(OpenGL REQUIRED)
-# find_package(GLFW3 REQUIRED)
-# target_link_libraries(simple_3d_viewer OpenGL::GL glfw)
-
+    )
