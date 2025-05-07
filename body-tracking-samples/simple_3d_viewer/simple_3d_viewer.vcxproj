@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -45,7 +45,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <IncludePath>..\sample_helper_includes;..\sample_helper_libs\window_controller_3d;C:\Users\brick\uchida\Develop\Azure-Kinect-Samples\body-tracking-samples\simple_3d_viewer\packages\Microsoft.Azure.Kinect.BodyTracking.1.1.2\build\native\include;C:\Users\brick\uchida\Develop\Azure-Kinect-Samples\body-tracking-samples\sample_helper_includes;C:\Users\brick\uchida\Develop\Azure-Kinect-Samples\body-tracking-samples\sample_helper_libs;C:\Users\brick\Azure-Kinect-Samples\body-tracking-samples\simple_3d_viewer\additional_includes;.\additional_includes;$(IncludePath)</IncludePath>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\opencv\build\x64\vc16\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\build\bin\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\build\temp\$(Configuration)\$(MSBuildProjectName)\</IntDir>
   </PropertyGroup>
@@ -63,9 +63,11 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Program Files\Azure Kinect SDK v1.4.1\sdk\include;C:\Program Files\Azure Kinect Body Tracking SDK\sdk\include;C:\Libs\glfw-3.4\include;C:\opencv\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>k4a.lib;k4abt.lib;opencv_world4110d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib;C:\Program Files\Azure Kinect Body Tracking SDK\sdk\windows-desktop\amd64\release\lib;C:\opencv\build\x64\vc16\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -86,6 +88,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AngleCalculator.cpp" />
+    <ClCompile Include="Calibration.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Addition.cpp" />
   </ItemGroup>
@@ -101,6 +104,7 @@
   <ItemGroup>
     <ClInclude Include="Addition.h" />
     <ClInclude Include="AngleCalculator.h" />
+    <ClInclude Include="Calibration.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

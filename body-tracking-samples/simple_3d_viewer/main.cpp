@@ -672,6 +672,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    uint32_t deviceCount = k4a_device_get_installed_count();
+    std::cerr << "Number of Kinect devices installed: " << deviceCount << std::endl;
+
     // Open the CSV file
     std::ofstream csvFile(inputSettings.CSVFileName, std::ios::app);
     if (!csvFile.is_open())

@@ -24,6 +24,9 @@
     <ClCompile Include="AngleCalculator.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
+    <ClCompile Include="Calibration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -34,6 +37,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AngleCalculator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Calibration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
