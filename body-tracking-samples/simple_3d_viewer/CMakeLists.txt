@@ -16,7 +16,7 @@ add_executable(simple_3d_viewer
 
 target_include_directories(simple_3d_viewer PRIVATE ../sample_helper_includes)
 
-find_package(glfw3 REQUIRED)
+#find_package(glfw3 REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 include_directories(${EIGEN3_INCLUDE_DIR})
