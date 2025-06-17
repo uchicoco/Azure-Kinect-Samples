@@ -16,6 +16,7 @@
 #include <Window3dWrapper.h>
 
 #include "Addition.h"
+#include "Pipe.h"
 
 void PrintUsage()
 {
@@ -682,6 +683,11 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    // Initialize named pipe
+    if (!InitializeNamedPipe()) {
+        std::cerr << "Warning: Failed to initialize named pipe. Real-time data transfer disabled." << std::endl;
+    }
+
     // Either play the offline file or play from the device
     if (inputSettings.Offline == true)
     {
@@ -692,6 +698,11 @@ int main(int argc, char** argv)
         PlayFromDevice(inputSettings, csvFile);
     }
 	csvFile.close();
+
+    // Cleanup
+    CleanupNamedPipe();
+    csvFile.close();
+    return 0;
 
     return 0;
 }

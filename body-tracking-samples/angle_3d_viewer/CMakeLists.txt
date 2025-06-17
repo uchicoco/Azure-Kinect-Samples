@@ -12,7 +12,8 @@ add_subdirectory(../sample_helper_libs/window_controller_3d window_controller_3d
 add_executable(angle_3d_viewer
        main.cpp
        Addition.cpp
-       AngleCalculator.cpp)
+       AngleCalculator.cpp
+       Pipe.cpp)
 
 target_include_directories(angle_3d_viewer PRIVATE ../sample_helper_includes)
 

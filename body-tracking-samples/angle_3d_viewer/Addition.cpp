@@ -17,6 +17,7 @@
 #endif
 #include "Addition.h"
 #include "AngleCalculator.h"
+#include "Pipe.h"
 
 // Mutex for file access synchronization
 static std::mutex g_fileMutex;
@@ -124,6 +125,9 @@ void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstr
             double legs_angle = CalculateProjectedAngle(jointPositionPelvis, jointPositionNeck, jointPositionNose, jointPositionKneeLeft, jointPositionPelvis, jointPositionKneeRight);
 
             batchStream << body.id << "," << timestamp;
+
+            // Send to named pipe
+            SendAngleDataToPipe(body.id, right_arm_angle, left_arm_angle, legs_angle, timestamp);
             
             for (int joint = 0; joint < static_cast<int>(K4ABT_JOINT_COUNT); joint++)
             {
