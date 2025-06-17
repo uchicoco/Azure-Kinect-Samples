@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 
+# Low-pass filter function
 def lpf(fs, fc, x):
     omega_c = 2*np.pi*(fc/fs)
     alpha = np.exp(-omega_c)
@@ -48,7 +49,7 @@ def main():
                 for col, idx in zip(selected_columns, col_indices):
                     values_dict[col].append(float(row[idx]))
 
-    # フィルタリング処理と結果保存
+    # Filtering and plotting
     filtered_dict = {}
     plt.figure()
     for col in selected_columns:
@@ -58,27 +59,26 @@ def main():
         filtered_dict[col] = filtered_values
         plt.plot(filtered_values, label=f'{col} LPF')
 
-    # CSVに保存
+    # Save CSV
     if args.save_csv:
         output_csv = f'filtered_{target_number}_{"_".join(selected_columns)}.csv'
         with open(output_csv, 'w', newline='') as f:
             writer = csv.writer(f)
-            # ヘッダー書き込み（元CSVの最初の列名を取得）
+            # Write header
             first_col_name = header[0]  # 元CSVの最初の列名
             header_row = [first_col_name, 'Index'] + [f'{col}_Original' for col in selected_columns] + [f'{col}_Filtered' for col in selected_columns]
             writer.writerow(header_row)
-            
-            # データ書き込み
+            # Write data
             max_len = max(len(values_dict[col]) for col in selected_columns)
             for i in range(max_len):
-                row = [target_number, i]  # 最初の列にtarget_numberを保持
-                # オリジナル値
+                row = [target_number, i]
+                # Original values
                 for col in selected_columns:
                     if i < len(values_dict[col]):
                         row.append(values_dict[col][i])
                     else:
                         row.append('')
-                # フィルタリング済み値
+                # Filtered values
                 for col in selected_columns:
                     if i < len(filtered_dict[col]):
                         row.append(filtered_dict[col][i])

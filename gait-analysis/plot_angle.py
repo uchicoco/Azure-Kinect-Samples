@@ -11,7 +11,7 @@ def main():
     parser.add_argument("csv_file", help="CSV file path")
     parser.add_argument("target_number", help="Value to match in the first column")
     parser.add_argument("--columns", required=True, help="Comma-separated column names to plot")
-    parser.add_argument("--hilbert", action="store_true", help="Also plot Hilbert envelope")
+    parser.add_argument("--hilbert", action="store_true", help="Also plot Hilbert transform phase")
     args = parser.parse_args()
 
     csv_file = args.csv_file
@@ -36,7 +36,7 @@ def main():
                 for col, idx in zip(selected_columns, col_indices):
                     values_dict[col].append(float(row[idx]))
 
-    # メインのプロット
+    # Plot
     plt.figure(figsize=(12, 8))
     for col in selected_columns:
         values = np.array(values_dict[col])
@@ -54,7 +54,7 @@ def main():
     plt.legend()
     plt.savefig(f'plot_{target_number}_{"_".join(selected_columns)}.png')
 
-    # ヒルベルト変換のphaseだけの別のプロット
+    # Plot phase
     if args.hilbert:
         plt.figure(figsize=(12, 6))
         for col in selected_columns:
