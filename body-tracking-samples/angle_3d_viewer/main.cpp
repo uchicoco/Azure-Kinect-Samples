@@ -116,6 +116,8 @@ struct InputSettings
 	std::string ImageFolder = "color_images";
 	k4a_fps_t CameraFPS = K4A_FRAMES_PER_SECOND_30;
 	k4a_color_resolution_t ColorResolution = K4A_COLOR_RESOLUTION_OFF;
+    k4a_wired_sync_mode_t WiredSyncMode = K4A_WIRED_SYNC_MODE_MASTER;
+    // k4a_wired_sync_mode_t WiredSyncMode = K4A_WIRED_SYNC_MODE_SUBORDINATE;;
 };
 
 bool ParseInputSettingsFromArg(int argc, char** argv, InputSettings& inputSettings)
@@ -501,6 +503,7 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
     }
     
     deviceConfig.camera_fps = inputSettings.CameraFPS;
+    deviceConfig.wired_sync_mode = inputSettings.WiredSyncMode;
     VERIFY(k4a_device_start_cameras(device, &deviceConfig), "Start K4A cameras failed!");
 
     // Get calibration information

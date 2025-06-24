@@ -19,8 +19,76 @@
 #include "AngleCalculator.h"
 #include "Pipe.h"
 
+#define xz_exchange 0
+#define x_inv 1
+#define y_inv -1
+#define z_inv 1
+#define x_trans 0
+#define y_trans 1200
+#define z_trans 0
+
 // Mutex for file access synchronization
 static std::mutex g_fileMutex;
+
+// Helper function to apply coordinate transformations
+k4a_float3_t TransformJointPosition(const k4a_float3_t& original)
+{
+    k4a_float3_t transformed;
+    
+    // Step 1: Exchange x and z axes if xz_exchange is 1
+    if (xz_exchange == 1)
+    {
+        transformed.xyz.x = original.xyz.z;
+        transformed.xyz.z = original.xyz.x;
+        transformed.xyz.y = original.xyz.y;
+    }
+    else
+    {
+        transformed = original;
+    }
+    
+    // Step 2: Apply axis inversions
+    transformed.xyz.x *= x_inv;
+    transformed.xyz.y *= y_inv;
+    transformed.xyz.z *= z_inv;
+    
+    // Step 3: Apply translations
+    transformed.xyz.x += x_trans;
+    transformed.xyz.y += y_trans;
+    transformed.xyz.z += z_trans;
+    
+    return transformed;
+}
+
+// Helper function to transform Eigen::Vector3d
+Eigen::Vector3d TransformEigenVector(const Eigen::Vector3d& original)
+{
+    Eigen::Vector3d transformed;
+    
+    // Step 1: Exchange x and z axes if xz_exchange is 1
+    if (xz_exchange == 1)
+    {
+        transformed.x() = original.z();
+        transformed.z() = original.x();
+        transformed.y() = original.y();
+    }
+    else
+    {
+        transformed = original;
+    }
+    
+    // Step 2: Apply axis inversions
+    transformed.x() *= x_inv;
+    transformed.y() *= y_inv;
+    transformed.z() *= z_inv;
+    
+    // Step 3: Apply translations
+    transformed.x() += x_trans;
+    transformed.y() += y_trans;
+    transformed.z() += z_trans;
+    
+    return transformed;
+}
 
 void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstream& csvFile, uint64_t timestamp)
 {
@@ -64,60 +132,60 @@ void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstr
         // Process all bodies
         for (const auto& body : bodies)
         {
-            // Calculate arm right_arm_angle
-            Eigen::Vector3d jointPositionPelvis(
+            // Calculate arm right_arm_angle with transformed positions
+            Eigen::Vector3d jointPositionPelvis = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_PELVIS)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_PELVIS)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_PELVIS)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionNeck(
+            Eigen::Vector3d jointPositionNeck = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NECK)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NECK)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NECK)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionNose(
+            Eigen::Vector3d jointPositionNose = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NOSE)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NOSE)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_NOSE)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionShoulderRight(
+            Eigen::Vector3d jointPositionShoulderRight = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_RIGHT)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_RIGHT)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_RIGHT)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionElbowRight(
+            Eigen::Vector3d jointPositionElbowRight = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_RIGHT)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_RIGHT)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_RIGHT)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionShoulderLeft(
+            Eigen::Vector3d jointPositionShoulderLeft = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_LEFT)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_LEFT)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_SHOULDER_LEFT)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionElbowLeft(
+            Eigen::Vector3d jointPositionElbowLeft = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_LEFT)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_LEFT)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_ELBOW_LEFT)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionKneeRight(
+            Eigen::Vector3d jointPositionKneeRight = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_KNEE_RIGHT)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_KNEE_RIGHT)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_KNEE_RIGHT)].position.xyz.z
-            );
+            ));
 
-            Eigen::Vector3d jointPositionKneeLeft(
+            Eigen::Vector3d jointPositionKneeLeft = TransformEigenVector(Eigen::Vector3d(
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_KNEE_LEFT)].position.xyz.x,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_KNEE_LEFT)].position.xyz.y,
                 body.skeleton.joints[static_cast<int>(K4ABT_JOINT_KNEE_LEFT)].position.xyz.z
-            );
+            ));
 
 
 			double right_arm_angle = CalculateProjectedAngle(jointPositionPelvis, jointPositionNeck, jointPositionNose, jointPositionPelvis, jointPositionShoulderRight, jointPositionElbowRight);
@@ -131,10 +199,11 @@ void SaveMultipleBodiesToCSV(const std::vector<k4abt_body_t>& bodies, std::ofstr
             
             for (int joint = 0; joint < static_cast<int>(K4ABT_JOINT_COUNT); joint++)
             {
-                const k4a_float3_t& position = body.skeleton.joints[joint].position;
-                batchStream << "," << position.xyz.x
-                           << "," << position.xyz.y
-                           << "," << position.xyz.z
+                // Apply transformation to joint position before writing to CSV
+                k4a_float3_t transformedPosition = TransformJointPosition(body.skeleton.joints[joint].position);
+                batchStream << "," << transformedPosition.xyz.x
+                           << "," << transformedPosition.xyz.y
+                           << "," << transformedPosition.xyz.z
                            << "," << body.skeleton.joints[joint].confidence_level;
             }
             batchStream << "," << right_arm_angle << "," << left_arm_angle << "," << legs_angle << std::endl;
