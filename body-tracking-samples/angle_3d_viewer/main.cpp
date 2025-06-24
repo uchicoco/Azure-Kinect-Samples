@@ -605,7 +605,15 @@ void PlayFromDevice(InputSettings inputSettings, std::ofstream& csvFile)
         if (popFrameResult == K4A_WAIT_RESULT_SUCCEEDED)
         {
 			// Get timestamp of system
-            uint64_t bodyTimestamp = GetTimestamp();
+            // uint64_t bodyTimestamp = GetTimestamp();
+            k4a_capture_t originalCapture = k4abt_frame_get_capture(bodyFrame);
+            k4a_image_t depthImage = k4a_capture_get_depth_image(originalCapture);
+            uint64_t bodyTimestamp = 0;
+            if (depthImage != nullptr) {
+                bodyTimestamp = k4a_image_get_device_timestamp_usec(depthImage);
+            }
+            k4a_image_release(depthImage);
+            k4a_capture_release(originalCapture);
             
             // Process the body frame based on visualization setting
             if (inputSettings.Visualization)
