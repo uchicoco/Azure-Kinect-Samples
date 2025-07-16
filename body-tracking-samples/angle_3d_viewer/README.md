@@ -94,9 +94,6 @@ Use Visual Studio to open `angle_3d_viewer.vcxproj` or use CMake as above.
 - `Pipe.cpp/h`: Named pipe management and angle data output
 - `additional_includes/`: Eigen library and other dependencies
 
-## License
-This project is licensed under the MIT License. See `LICENSE` and individual COPYING files for third-party dependencies.
-
 ## Acknowledgements
 - Microsoft Azure Kinect SDK
 - Eigen library
