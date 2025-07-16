@@ -103,9 +103,6 @@ Use Visual Studio to open `angle_3d_viewer.vcxproj` or use CMake as above.
 - For CUDA/TensorRT modes, verify GPU compatibility and driver installation
 - On Linux, ensure permissions for `/tmp/angle_data_pipe`
 
-## Contact
-For issues or contributions, please open an issue or pull request on the repository.
-
 ## Prerequisites
 
 1. Install the Azure Kinect SDK and Body Tracking SDK:
